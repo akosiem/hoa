@@ -18,3 +18,30 @@ function bind(){if($('search'))$('search').oninput=e=>{search=e.target.value;$('
 function bindStatements(){document.querySelectorAll('[data-soa]').forEach(el=>el.onclick=()=>statement(el.dataset.soa))}function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',4500)}
 function csv(name,rows){let data=[['FICTIONAL SAMPLE DATA — NOT OFFICIAL RECORDS',label(month)],...rows].map(row=>row.map(x=>'"'+String(x).replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob(['\ufeff'+data],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='kasama-v2-'+name+'-'+month+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 $('reset').onclick=()=>{showDialog('Reset the sample workbook?','<p>This removes your Version 2 practice entries and restores the sample accounts. Version 1 stays unchanged.</p>','<button class="secondary" id="cancel-reset">Keep my entries</button><button class="primary" id="do-reset">Reset sample data</button>');$('cancel-reset').onclick=()=>dialog.close();$('do-reset').onclick=()=>{try{localStorage.removeItem(KEY);payments=structuredClone(Model.sample);drafts={};dialog.close();render();toast('Sample workbook restored.')}catch{toast('Browser storage could not be cleared. Try again.')}}};window.addEventListener('hashchange',render);render();
+
+// Keep the control outside the sidebar so it remains available to reopen it.
+(() => {
+  const sidebar = document.querySelector('aside');
+  sidebar.id = 'sidebar';
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'sidebar-toggle';
+  toggle.setAttribute('aria-controls', sidebar.id);
+  toggle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 9l-3 3 3 3"/></svg>';
+  document.querySelector('header').prepend(toggle);
+  const key = 'kasama-v2-sidebar-collapsed';
+  let collapsed = false;
+  try { collapsed = localStorage.getItem(key) === 'true'; } catch {}
+  function update() {
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    toggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  }
+  toggle.addEventListener('click', () => {
+    collapsed = !collapsed;
+    update();
+    try { localStorage.setItem(key, String(collapsed)); } catch {}
+  });
+  update();
+})();

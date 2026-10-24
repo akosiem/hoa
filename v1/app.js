@@ -21,3 +21,30 @@ function render(){nav();let [route,id]=location.hash.slice(1).split('/');if(['de
 function bind(){let search=document.getElementById('search');if(search)search.oninput=e=>{query=e.target.value;document.getElementById('house-list').innerHTML=houseCards(location.hash==='#statements')};let street=document.getElementById('street');if(street)street.onchange=e=>{filter=e.target.value;document.getElementById('house-list').innerHTML=houseCards(location.hash==='#statements')};let form=document.getElementById('payment-form');if(form){if(draft){for(let k of ['account','amount','date','method','allocation','reference'])form.elements[k].value=k==='amount'?draft.amount/100:k==='allocation'?draft.mode:draft[k];}form.elements.account.onchange=()=>{let id=form.elements.account.value;document.getElementById('account-balance').textContent=id?'Balance due: '+money(total(id)):'Select a household to see the balance.'};form.elements.account.onchange();form.onsubmit=e=>{e.preventDefault();let f=new FormData(form),amount=Math.round(Number(f.get('amount'))*100),id=f.get('account'),mode=f.get('allocation');if(!account(id)||!Number.isSafeInteger(amount)||amount<=0)return;draft={account:id,amount,date:f.get('date'),method:f.get('method'),reference:f.get('reference'),mode,...allocation(id,amount,mode)};location.hash='review'}}let confirm=document.getElementById('confirm-payment');if(confirm)confirm.onclick=()=>{if(!draft)return;confirm.disabled=true;let p={...draft,id:crypto.randomUUID?crypto.randomUUID():"practice-"+Date.now()+"-"+Math.random().toString(16).slice(2),seed:false};try{localStorage.setItem('kasama-demo-v1',JSON.stringify([...payments,p]));payments.push(p);draft=null;location.hash='success/'+p.id}catch{document.getElementById('save-error').textContent='This browser could not save the entry. Allow browser storage and try again.';confirm.disabled=false}};let print=document.getElementById('print');if(print)print.onclick=()=>window.print();let month=document.getElementById('report-month');if(month)month.onchange=e=>{reportMonth=e.target.value;render()};let ex=document.getElementById('export');if(ex)ex.onclick=exportCsv;}
 function exportCsv(){let rows=[['DEMO DATA — NOT OFFICIAL RECORDS'],['Date','Household','Method','Amount PHP','Reference'],...payments.filter(p=>p.date.startsWith(reportMonth)).map(p=>[p.date,account(p.account).name,p.method,(p.amount/100).toFixed(2),p.reference])];let text=rows.map(r=>r.map(x=>'"'+String(x).replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"').join(',')).join('\r\n');let url=URL.createObjectURL(new Blob(['\ufeff'+text],{type:'text/csv;charset=utf-8'}));let a=document.createElement('a');a.href=url;a.download='kasama-demo-collections-'+reportMonth+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 document.getElementById('reset').onclick=()=>{let d=document.getElementById('modal');d.innerHTML='<h2>Start fresh?</h2><p>This removes your practice payments and restores the fictional sample records.</p><div class="actions"><button class="secondary" id="cancel-reset">Keep practicing</button><button class="primary" id="confirm-reset">Reset demo</button></div>';d.showModal();document.getElementById('cancel-reset').onclick=()=>d.close();document.getElementById('confirm-reset').onclick=()=>{try{localStorage.removeItem('kasama-demo-v1');payments=structuredClone(initialPayments);draft=null;d.close();if(location.hash==='#home')render();else location.hash='home'}catch{d.innerHTML='<p>Browser storage could not be cleared. Please try again.</p><button onclick="this.closest(\'dialog\').close()">Close</button>'}}};window.addEventListener('hashchange',()=>{if(!location.hash.startsWith('#pay')&&location.hash!=='#review')draft=null;render()});render();
+
+// Keep the control outside the sidebar so it remains available to reopen it.
+(() => {
+  const sidebar = document.querySelector('aside');
+  sidebar.id = 'sidebar';
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'sidebar-toggle';
+  toggle.setAttribute('aria-controls', sidebar.id);
+  toggle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 9l-3 3 3 3"/></svg>';
+  document.querySelector('header').prepend(toggle);
+  const key = 'kasama-v1-sidebar-collapsed';
+  let collapsed = false;
+  try { collapsed = localStorage.getItem(key) === 'true'; } catch {}
+  function update() {
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    toggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  }
+  toggle.addEventListener('click', () => {
+    collapsed = !collapsed;
+    update();
+    try { localStorage.setItem(key, String(collapsed)); } catch {}
+  });
+  update();
+})();
